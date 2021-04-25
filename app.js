@@ -2,13 +2,16 @@ const express = require('express')
 const config = require('config')
 const path = require('path')
 const mongoose = require('mongoose')
+const fileUpload = require('express-fileupload')
 
 const app = express()
 
 app.use(express.json({ extended: true }))
+app.use(fileUpload({}))
 
 app.use('/api/auth', require('./routes/auth.routes'))
 app.use('/api/link', require('./routes/link.routes'))
+app.use('/api/upload', require('./routes/image.routes'))
 app.use('/t', require('./routes/redirect.routes'))
 
 if (process.env.NODE_ENV === 'production') {
