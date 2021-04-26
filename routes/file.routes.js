@@ -1,5 +1,5 @@
 const {Router} = require('express')
-const Image = require('../models/Image')
+const File = require('../models/File')
 const auth = require('../middleware/auth.middleware')
 const path = require('path')
 const fs = require('fs')
@@ -9,14 +9,15 @@ router.post('/file', auth, async (req, res) => {
     try {
         const file = req.files.files
         const types = file.name.split('.').pop()
-        const existing = await Image.findOne({name: file.name, type: types})
-
-        if (existing) {
-            return res.json({image: existing})
-        }
 
         const path = `${__dirname}\\..\\uploads\\${req.user.userId}`
         const path_name = `${__dirname}\\..\\uploads\\${req.user.userId}\\${file.name}`
+
+        const checkDoubleFile = await File.findOne({ name: file.name, owner: req.user.userId})
+
+        if (checkDoubleFile) {
+            return res.status(400).json({message: 'Файл уже существует'})
+        }
 
         if (!fs.existsSync(path_name)) {
             try {
@@ -35,7 +36,7 @@ router.post('/file', auth, async (req, res) => {
             res.status(400).json({message: 'Файл уже существует'})
         }
 
-        const images = new Image({
+        const images = new File({
             name: file.name, owner: req.user.userId, type: types
         })
         await images.save()
@@ -47,24 +48,40 @@ router.post('/file', auth, async (req, res) => {
     }
 })
 
-router.get('/getfile', auth, async (req, res) => {
+router.get('/getFileInfo', auth, async (req, res) => {
     try {
-        const files = await Image.find({ owner: req.user.userId })
+        const files = await File.find({ owner: req.user.userId })
         res.json(files)
     }catch (e) {
         res.status(500).json({message: 'Что-то сломалось :('})
     }
 })
 
-router.post('/openfile', auth, async (req, res) => {
+router.post('/downloadFile', auth, async (req, res) => {
     try {
         console.log(req.body)
         const name = req.body.body
         const path = `${__dirname}\\..\\uploads\\${req.user.userId}\\${name}`
+
         if (fs.existsSync(path)) {
-            console.log(path)
             return res.download(path, name)
         }
+    }catch (e) {
+        res.status(500).json({message: 'Что-то сломалось :('})
+    }
+})
+
+router.post('/removeFile', auth, async (req, res) => {
+    try {
+        const file = req.body
+        const path = `${__dirname}\\..\\uploads\\${req.user.userId}\\${file.fileName}`
+
+        if (fs.existsSync(path)) {
+            fs.rmSync(path, { recursive: true, force: true })
+            await File.deleteOne({name: file.fileName, data: file.fileDate, owner: req.user.userId})
+        }
+        res.status(202).json({message: 'Файл удален'})
+
     }catch (e) {
         res.status(500).json({message: 'Что-то сломалось :('})
     }

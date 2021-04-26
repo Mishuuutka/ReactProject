@@ -7,4 +7,4 @@ const schema = new Schema({
     owner: {type: Types.ObjectId, ref: 'User'}
 })
 
-module.exports = model('Image', schema)
+module.exports = model('File', schema)
